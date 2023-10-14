@@ -1,0 +1,22 @@
+IQClab V3.03
+- Added function fRobest for synthesizing robust estimators
+- Added Demo_014
+- Updated the function fYoulaSwitch
+
+IQClab V3.02
+- Fixed glitch in discrete time Zames-Falb multiplier (usbsr.m)
+- Included the option to consider discrete time systems with unspecified sampling time (i.e. Ts = -1)
+= Updated the uncertainty class usbsr the property 'OddEven' was replaced with 'Odd'
+
+IQClab V3.01
+- Added function iqcinvariance for invariance analysis
+- Added function mu2iqcanalysis for LTI IQC-analysis
+- Added discrete time Zames-Falb multiplier to uncertainty class usbsr
+- Added positive real relaxation to uncertainty class ultis
+- Added function fLFTdata
+- Added Demo_013
+- Improved iqcvar class
+- Minor bug-fixes and other improvements
+
+IQClab V3.00
+- First release

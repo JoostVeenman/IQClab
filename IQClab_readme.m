@@ -1,0 +1,14 @@
+disp('-------------------------------------------------------------------');
+disp('                          IQClab v3.03                             ');
+disp('-------------------------------------------------------------------');
+disp('Thanks for considering IQClab, your gateway for robustness analysis');
+disp('and control. Please visit www.iqclab.eu for the user manual, tips, ');
+disp('and furter information.                                            ');
+disp('                                                                   ');
+disp('This is copyrighted material owned by Novantec B.V.                ');
+disp('                                                                   ');
+disp('By installing and using IQClab you accept the Creative Commons     ');
+disp('Attribution-NonCommercial-NoDerivatives 4.0 International          ');
+disp('(CC BY-NC-ND 4.0) license terms and conditions. For further details');
+disp('please visit: https://creativecommons.org/licenses/by-nc-nd/4.0/   ');
+disp('-------------------------------------------------------------------');
