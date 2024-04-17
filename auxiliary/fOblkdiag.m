@@ -1,14 +1,13 @@
 function Y = fOblkdiag(X,O1,O2)
 % -------------------------------------------------------------------------
 %
-% IQClab:      Version 3.03
+% IQClab:      Version 3.04
 % Copyright:   This is copyrighted material owned by Novantec B.V.
 % Terms:       IQClab is available for non-commercial usage under a
-%              Creative Commons (Attribution-NonCommercial-NoDerivatives
-%              4.0 International (CC BY-NC-ND 4.0))license: 
-%              https://creativecommons.org/licenses/by-nc-nd/4.0/
-%              Commercial usage is only permitted with a commercial
-%              license. For further information please visit iqclab.eu
+%              Creative Commons (Attribution-NoDerivatives 4.0
+%              International (CC BY-ND 4.0)) license:  
+%              https://creativecommons.org/licenses/by-nd/4.0/
+%              For further information please visit iqclab.eu
 % Author:      J.Veenman
 % Date:        07-04-2011
 % 

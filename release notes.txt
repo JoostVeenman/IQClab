@@ -1,3 +1,8 @@
+IQClab V3.04
+- Changed licensing from creative commons CC BY-NC-ND 4.0 to CC BY-ND 4.0
+- Added function sensanalysis for performing parametric sensitivity analysis
+- Added Demo_015
+
 IQClab V3.03
 - Added function fRobest for synthesizing robust estimators
 - Added Demo_014
