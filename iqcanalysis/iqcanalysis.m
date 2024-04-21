@@ -1,7 +1,7 @@
 function prob = iqcanalysis(M,Delta,varargin)
 % -------------------------------------------------------------------------
 %
-% IQClab:      Version 3.04
+% IQClab:      Version 3.4.0
 % Copyright:   This is copyrighted material owned by Novantec B.V.
 % Terms:       IQClab is available for non-commercial usage under a
 %              Creative Commons (Attribution-NoDerivatives 4.0

@@ -1,19 +1,19 @@
-IQClab V3.04
+IQClab V3.4.0
 - Changed licensing from creative commons CC BY-NC-ND 4.0 to CC BY-ND 4.0
 - Added function sensanalysis for performing parametric sensitivity analysis
 - Added Demo_015
 
-IQClab V3.03
+IQClab V3.3.0
 - Added function fRobest for synthesizing robust estimators
 - Added Demo_014
 - Updated the function fYoulaSwitch
 
-IQClab V3.02
+IQClab V3.2.0
 - Fixed glitch in discrete time Zames-Falb multiplier (usbsr.m)
 - Included the option to consider discrete time systems with unspecified sampling time (i.e. Ts = -1)
 = Updated the uncertainty class usbsr the property 'OddEven' was replaced with 'Odd'
 
-IQClab V3.01
+IQClab V3.1.0
 - Added function iqcinvariance for invariance analysis
 - Added function mu2iqcanalysis for LTI IQC-analysis
 - Added discrete time Zames-Falb multiplier to uncertainty class usbsr
@@ -23,5 +23,5 @@ IQClab V3.01
 - Improved iqcvar class
 - Minor bug-fixes and other improvements
 
-IQClab V3.00
+IQClab V3.0.0
 - First release
