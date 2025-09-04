@@ -2,13 +2,12 @@ classdef iqcprob < matlab.mixin.SetGetExactNames
 
 % -------------------------------------------------------------------------
 %
-% IQClab:      Version 3.4.0
 % Copyright:   This is copyrighted material owned by Novantec B.V.
-% Terms:       IQClab is available for non-commercial usage under a
-%              Creative Commons (Attribution-NoDerivatives 4.0
-%              International (CC BY-ND 4.0)) license:  
-%              https://creativecommons.org/licenses/by-nd/4.0/
+% Terms:       IQClab is available under a Creative Commons
+%              (Attribution-NoDerivatives 4.0 International (CC BY-ND 4.0))
+%              license: https://creativecommons.org/licenses/by-nd/4.0/
 %              For further information please visit iqclab.eu
+%
 % Author:      J.Veenman
 % Date:        24-11-2019
 % 
@@ -126,7 +125,7 @@ properties
     MaxNumIter double {mustBeReal,mustBeFinite}                  = 800;      % maximum number of iterations
     FeasbRad   double {mustBeReal,mustBeFinite}                  = 1e9;      % Maximum bound on variables
     Terminate  double {mustBeReal,mustBeFinite}                  = 0;        % integer > 0 speeds up termination (see options mincx for further details)
-    Display    string {mustBeMember(Display,{'on','off'})}       = 'off';    % Display0 = 'on' or 'off'
+    Display    string {mustBeMember(Display,{'on','off','offe'})}= 'off';    % Display = 'on' or 'off' or 'offe' (off enttirely)
     Init       double {mustBeReal,mustBeFinite}                  = [];       % Initial condition LMIs
     eps        double {mustBeReal,mustBeFinite}                  = 1e-9;     % epsilon constant to enforce strict LMIs in Yalmip
     SolChk     string {mustBeMember(SolChk,{'on','off'})}        = 'off';    % Check if LMIs are feasible (valid for function: iqcanalysis)

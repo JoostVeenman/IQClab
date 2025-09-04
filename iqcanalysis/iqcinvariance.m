@@ -1,13 +1,12 @@
 function prob = iqcinvariance(M,Delta,varargin)
 % -------------------------------------------------------------------------
 %
-% IQClab:      Version 3.4.0
 % Copyright:   This is copyrighted material owned by Novantec B.V.
-% Terms:       IQClab is available for non-commercial usage under a
-%              Creative Commons (Attribution-NoDerivatives 4.0
-%              International (CC BY-ND 4.0)) license:  
-%              https://creativecommons.org/licenses/by-nd/4.0/
+% Terms:       IQClab is available under a Creative Commons
+%              (Attribution-NoDerivatives 4.0 International (CC BY-ND 4.0))
+%              license: https://creativecommons.org/licenses/by-nd/4.0/
 %              For further information please visit iqclab.eu
+%
 % Author:      J.Veenman
 % Date:        26-04-2022
 % 
@@ -47,20 +46,20 @@ function prob = iqcinvariance(M,Delta,varargin)
 %                      xdot =  A x +  B1 p +  B2 w,     x(0) = 0
 %                         q = C1 x + D11 p + D12 w
 %
-%                    compute the hyper ellipsoidal region 
+%                    and the fixed constant alp>0 (default is 1) compute
+%                    (minimize) the ellipsoidal region H such that
 %
-%                       x(t)\in{x\in R^n : x^T Hinv x \leq alp^2} 
-%
-%                    for ||w||_2 < alp by minimizing the trace of H =
-%                    Hinv^-1. 
+%                     x(t)\in{x\in R^n: x^T(t)H x(t)\leq
+%                              alp^2\|w\|_2^2} for all t\geq0           (1)
 %
 %                    This option can be selected by specifying the
 %                    performance metric option 'e2x' (energy to state) to
 %                    the performance block.
 %
 %                    Outputs:
-%                     - alp
-%                     - Hinv
+%                     - H:   The ellipsoid H satisfying (1) for a given
+%                            value of alp
+%                     - gamma: Trace(H^-1)
 %
 %                2.) Given the uncertain plant
 %
@@ -74,21 +73,21 @@ function prob = iqcinvariance(M,Delta,varargin)
 %                         z = C2 x
 %
 %                    with M21(\infty) = M22(\infty) = 0 (i.e. M21 and M22
-%                    are strictly proper), compute the smallest hyper
-%                    ellipsoidal region 
+%                    are strictly proper) and the fixed constant alp>0
+%                    (default is 1), compute (minimize) the ellipsoidal
+%                    region H such that
 %
-%                       z(t)\in{z\in R^n : z^T Hinv z \leq alp^2} 
-%
-%                    for ||w||_2 < alp by minimizing the trace of H =
-%                    Hinv^-1.
+%                     z(t)\in{z\in R^n_z: z^T(t)H z(t)\leq
+%                              alp^2\|w\|_2^2} for all t\geq0           (2)
 %
 %                    This option can be selected by specifying the
 %                    performance metric option 'e2z' (energy to output) to
 %                    the performance block.
 %
 %                    Outputs:
-%                     - alp
-%                     - Hinv
+%                     - H:   The ellipsoid H satisfying (2) for a given
+%                            value of alp.
+%                     - gamma: Trace(H^-1)
 %
 %                3.) Given the uncertain plant
 %
@@ -102,19 +101,19 @@ function prob = iqcinvariance(M,Delta,varargin)
 %                         z = C2 x
 %
 %                    with M21(\infty) = M22(\infty) = 0 (i.e. M21 and M22
-%                    are strictly proper, and the energy bound, alp, on the
-%                    disturbance input w (i.e. ||w||_2 < alp), compute the
-%                    peak gains gam_j on the performance output channels
-%                    j \in {1,...,n} such that 
+%                    are strictly proper and the fixed constant alp>0
+%                    (default is 1), compute the peak gains gam_j j \in
+%                    {1,...,nz} on the performance output channels such
+%                    that
 %
-%                      |z_j(t)| \leq sqrt(gam_j)*alp for all t \geq 0, 
-%                      j \in {1,...,n}
+%                    |z_j(t)| \leq sqrt(gam_j)*alp\|d\|_2 for all t\geq 0, 
+%                      j\in {1,...,n}                                   (3)
 %
 %                    by minimizing the sum of gam_j, j \in {1,...,n}.
 %
 %                    This option can be selected by specifying the
-%                    performance metric option ???e2p??? (energy to peak) to
-%                    the performance block. 
+%                    performance metric option e2p to the performance
+%                    block.
 %
 %                    Output:
 %                     - PeakGains = sqrt(gam_j)*alp
@@ -136,20 +135,17 @@ function prob = iqcinvariance(M,Delta,varargin)
 %                    with M21(\infty) = 0 (i.e. M21 is strictly proper, and
 %                    the non-zero initial state x0 minimize gamma such that
 %
-%                      ||z(t)|| = ||C2x(t)|| \leq gamma||x0|| for all t>0
-%
-%                    In other words, for a given initial condition, x0,
-%                    compute a bound on the Euclidean norm of the
-%                    performance output z for all t>0.
+%                      z(t)\in{z\in R^n_z: z^THz\leq alp||x0|| 
+%                                                   for all t\geq0      (4)
 %
 %                    This option can be selected by specifying the
-%                    performance metric option ???x2p??? (state to peak) to the
-%                    performance block. Here one can also (optionally)
-%                    specify the option Xinit, which selects the non-zero
-%                    elements of the initial condition.
+%                    performance metric option x2z (state to peak) to the
+%                    performance block.
 %
 %                    Output:
-%                     - gamma
+%                     - H:   The ellipsoid H satisfying (4) for a given
+%                            value of alp. 
+%                     - gamma: Trace(H^-1)
 % -------------------------------------------------------------------------
 
 if isempty(varargin)
@@ -173,16 +169,22 @@ elseif length(varargin) > 1
         set(prob,varargin{2*i-1},varargin{2*i})
     end
 end
-if isobject(Delta)
-   U{1}          = Delta;
-   Delta         = U;
+
+DE               = exist('Delta','var');
+if DE
+    if isobject(Delta)
+       U{1}      = Delta;
+       Delta     = U;
+    end
+else
+    Delta        = {};
 end
 
 % Sort performance and uncertainty blocks
 k                = 1;
 j                = 1;
 for i = 1:length(Delta)
-    if strcmp(class(Delta{i}),'iqcdelta')
+    if isa(Delta{i},'iqcdelta')
         if strcmp(Delta{i}.ChannelClass{1},'P')
             DeltaP{k} = Delta{i};
             k         = k + 1;
@@ -194,10 +196,15 @@ for i = 1:length(Delta)
        j         = j + 1;
     end
 end
-if k == 1
-    Delta        = DeltaU;
-else
+
+DU               = exist('DeltaU','var');
+DP               = exist('DeltaP','var');
+if DU && DP
     Delta        = [DeltaU,DeltaP];
+elseif DU && ~DP
+    Delta        = DeltaU;
+elseif ~DU && DP
+    Delta        = DeltaP;
 end
 
 % Permute plant in- and output channels according to the delta structure
@@ -212,7 +219,9 @@ end
 if sum(sum(To) > 1) || sum(sum(To.') > 1) || sum(sum(Ti) > 1) || sum(sum(Ti.') > 1)
    error('Error: At least 1 plant in- or output channel was assigned twice or more.');
 end
-M                = To*M*Ti;
+if ~isempty(To) && ~isempty(Ti)
+    M             = To*M*Ti;
+end
 
 % Get sample time plant M
 Ts               = M.Ts;
@@ -321,7 +330,7 @@ for i = 1:length(Delta)
                 pm(k,1:4) = [1,0,0,0];
             elseif strcmp(Delta{i}.PerfMetric,'e2p')
                 pm(k,1:4) = [0,1,0,0];
-            elseif strcmp(Delta{i}.PerfMetric,'x2p') 
+            elseif strcmp(Delta{i}.PerfMetric,'x2z') 
                 pm(k,1:4) = [0,0,1,0];
             elseif strcmp(Delta{i}.PerfMetric,'e2z') 
                 pm(k,1:4) = [0,0,0,1];
@@ -330,19 +339,9 @@ for i = 1:length(Delta)
             end
             for ijk = 1:length(Delta{i}.InputChannel)
                 chi = [chi,Delta{i}.InputChannel{ijk}];
-                if ~isempty(Delta{i}.NormBounds{1})
-                    chiB(ijk) = Delta{i}.NormBounds{1};
-                else
-                    chiB(ijk) = 1;
-                end
             end
             for ijk = 1:length(Delta{i}.OutputChannel)
                 cho = [cho,Delta{i}.OutputChannel{ijk}];
-                if ~isempty(Delta{i}.Xinit)
-                    Tx0       = orth(diag(Delta{i}.Xinit));
-                else
-                    Tx0       = ones(size(M.a,1),1);
-                end
             end
             k = k + 1;
     end
@@ -352,21 +351,12 @@ if size(pm,1) > 1
 else
     spm = pm;
 end
-if spm(1) > 0      && spm(2) == 0 && spm(3) == 0 && spm(4) == 0
+if      spm(1) > 0 && spm(2) == 0 && spm(3) == 0 && spm(4) == 0
     pm  = 'e2x';
 elseif spm(1) == 0 && spm(2) > 0  && spm(3) == 0 && spm(4) == 0
     pm  = 'e2p';
-    if ~isempty(chi)
-        if mean(chiB)~= chiB(1)
-            error('Error: The norm-bound alp on w should be the same for each channel');
-        end
-        prob.alp = chiB(1);
-    else
-        prob.alp = 1;
-    end
 elseif spm(1) == 0 && spm(2) == 0 && spm(3) > 0  && spm(4) == 0
-    pm  = 'x2p';
-    prob.Tx0 = Tx0;
+    pm  = 'x2z';
 elseif spm(1) == 0 && spm(2) == 0 && spm(3) == 0 && spm(4) > 0
     pm  = 'e2z';
 elseif spm(1) == 0 && spm(2) == 0 && spm(3) == 0 && spm(4) == 0
@@ -398,6 +388,9 @@ Tz      = get(prob,'Tz');
 
 switch pm
     case 'e2x'
+        % Extract alp from DeltaP 
+        alp            = prob.alp;
+        
         % Construct extended plant compatible with the structure of "Pi"
         Mex            = fplantex(M,IO);
         
@@ -408,7 +401,7 @@ switch pm
         nxpsi          = size(Psi.a,1);
         B              = fss2m(G);
         sB             = size(B,2)-length(chi);
-        A              = fJt(length(chi),sB)*fJt(length(chi),sB)';
+        A              = alp^2*fJt(length(chi),sB)*fJt(length(chi),sB)';
         B1             = [eye(nx+nxp);zeros(nxpsi,nxp),Tz,zeros(nxpsi,nxp)];
         A1             = -fOblkdiag(eye(nxp),zeros(nxpsi));
         Tg             = ones(nxp+1,1);
@@ -442,25 +435,22 @@ switch pm
                 V1n    = iqcdec2mat(prob,V1);
                 eP1    = eig(B1'*V1n*B1-A1-eps*eye(size(B1,2)));
                 
-                V22n   = iqcdec2mat(prob,V22);
-                eP2    = eig(Psi2m'*V22n*Psi2m+eps*eye(size(Psi2m,2)));
-                
                 disp('-------------------------------------------------------------------');
                 disp('Perform a solution check: ...')
-                if sum(eP > 0) > 0 || sum(eP1 < 0) > 0 || sum(eP2 > 0) > 0
+                if sum(eP > 0) > 0 || sum(eP1 < 0) > 0
                     disp('The problem is infeasible.');
                     set(prob,'gamma',-1);
+                    prob.H   = -1;
                 else
                     disp(['The problem is feasible: gamma = ',num2str(prob.gamma)]);
-                    prob.alp  = sqrt(prob.gamma);
-                    prob.Hinv = iqcdec2mat(prob,H)^-1;
+                    prob.H    = iqcdec2mat(prob,H)^-1;
                 end
             else
-                prob.alp  = sqrt(prob.gamma);
-                prob.Hinv = iqcdec2mat(prob,H)^-1;
+                prob.H   = iqcdec2mat(prob,H)^-1;
             end
         else
             disp('The solver thinks the problem is infeasible.')
+            prob.H   = -1;
         end
     case 'e2p'
         if norm(M.d(cho,:)) > 1e-15
@@ -468,6 +458,8 @@ switch pm
         else
             M.d(cho,:) = 0*M.d(cho,:);
         end
+        % Extract alp from DeltaP 
+        alp            = prob.alp;
         
         % Construct extended plant compatible with the structure of "Pi"
         Mex            = fplantex(M(1:end-length(cho),:),IO);
@@ -479,7 +471,7 @@ switch pm
         nxpsi          = size(Psi.a,1);
         B              = fss2m(G);
         sB             = size(B,2)-length(chi);
-        A              = fJt(length(chi),sB)*fJt(length(chi),sB)';
+        A              = alp^2*fJt(length(chi),sB)*fJt(length(chi),sB)';
         B1             = [eye(1+nxpsi+nxp);zeros(nxpsi,1),Tz,zeros(nxpsi,nxp)];
         for i = 1:length(cho)
             A1{i}      = -fOblkdiag(M.c(cho(i),:),zeros(nxpsi));    
@@ -518,65 +510,64 @@ switch pm
                 for i = 1:length(cho)
                     V1n{i} = iqcdec2mat(prob,V1{i});
                     eP1    = [eP1;eig(B1'*V1n{i}*B1-A1{i}-eps*eye(size(B1,2)))];
-                end         
-                V22n   = iqcdec2mat(prob,V22);
-                eP2    = eig(Psi2m'*V22n*Psi2m+eps*eye(size(Psi2m,2)));
-                
+                end
                 disp('-------------------------------------------------------------------');
                 disp('Perform a solution check: ...')
-                if sum(eP > 0) > 0 || sum(eP1 < 0) > 0 || sum(eP2 > 0) > 0
+                if sum(eP > 0) > 0 || sum(eP1 < 0) > 0
                     disp('The problem is infeasible.');
                     set(prob,'gamma',-1);
+                    prob.PeakGain = -ones(size(gn.svar,1),1);
                 else
                     disp(['The problem is feasible: gamma = ',num2str(prob.gamma)]);
-                    prob.PeakGain = sqrt(iqcdec2mat(prob,gn))*prob.alp;
+                    prob.PeakGain = sqrt(iqcdec2mat(prob,gn))*alp;
                 end
             else
-                prob.PeakGain = sqrt(iqcdec2mat(prob,gn))*prob.alp;
+                prob.PeakGain = sqrt(iqcdec2mat(prob,gn))*alp;
             end
         else
             disp('The solver thinks the problem is infeasible.')
+            prob.PeakGain = -ones(size(gn.svar,1),1);
         end
-    case 'x2p'
+    case 'x2z'
         if norm(M.d(cho,:)) > 1e-15
             error('The uncertain plant must be strictly proper from all inputs to all performnace outputs.');
         else
             M.d(cho,:) = 0*M.d(cho,:);
         end
-        
+        % Extract alp from DeltaP 
+        alp            = prob.alp;
+
         % Construct extended plant compatible with the structure of "Pi"
         Mex            = fplantex(M(1:end-length(cho),:),IO);
+        G              = fmultss(Psi,Mex);
         
         % Construct the main LMI matrices
-        G              = fmultss(Psi,Mex);
         nx             = size(G.a,1);
         nxp            = size(Mex.a,1);
         nxpsi          = size(Psi.a,1);
         B              = fss2m(G);
         B1             = [eye(length(cho)+nx);zeros(nxpsi,length(cho)),Tz,zeros(nxpsi,nxp)];
         A1             = -fOblkdiag(M.c(cho,:),zeros(nxpsi));
-        Bh             = [eye(length(cho));eye(length(cho))];
-%         Bx22           = [eye(nxp);eye(nxp)];
-        Bx22           = [Tx0;eye(size(Tx0,2))];
+        Tg             = ones(length(cho)+1,1);
         
         % Define LMI variables
         gamma          = iqcvar(prob,[1,1],'symmetric');
         X              = iqcvar(prob,[nx,nx],'symmetric');
         X22            = X(nxpsi+1:X.Dim(1),nxpsi+1:X.Dim(1));
         H              = iqcvar(prob,[length(cho),length(cho)],'symmetric');
+        dH             = diag(diag(H));
         V              = blkdiag(kron(kyp,X),P);
         V1             = blkdiag(H,X,-Z);
-        Vh             = blkdiag(H,-gamma*eye(length(cho)));
-%         Vx22           = blkdiag(X22,-gamma*eye(nxp));
-        Vx22           = blkdiag(X22,-gamma*eye(size(Tx0,2)));
+        Vg             = blkdiag(dH,-gamma);
 
         % Define LMIs
         prob           = iqclmi(prob,gamma,1);
         prob           = iqclmi(prob,V,-1,0,B);
         prob           = iqclmi(prob,V1,1,A1,B1);
-        prob           = iqclmi(prob,Vh,-1,0,Bh);
-        prob           = iqclmi(prob,Vx22,-1,0,Bx22);
+        prob           = iqclmi(prob,X22,-1,alp*eye(size(M.a,1)));
+        prob           = iqclmi(prob,Vg,-1,0,Tg);
         prob           = iqclmi(prob,gamma,-1,get(prob,'gmax'));
+        
         prob           = iqcsolve(prob,gamma);
         
         if prob.gamma ~= -1
@@ -591,23 +582,22 @@ switch pm
                 V1n    = iqcdec2mat(prob,V1);
                 eP1    = eig(B1'*V1n*B1-A1-eps*eye(size(B1,2)));
                 
-                Vhn    = iqcdec2mat(prob,Vh);
-                eP2    = eig(Bh'*Vhn*Bh+eps*eye(size(Bh,2)));
-                
-                Vx22n  = iqcdec2mat(prob,Vx22);
-                eP3    = eig(Bx22'*Vx22n*Bx22+eps*eye(size(Bx22,2)));
-                
                 disp('-------------------------------------------------------------------');
                 disp('Perform a solution check: ...')
-                if sum(eP > 0) > 0 || sum(eP1 < 0) > 0 || sum(eP2 > 0) > 0 || sum(eP3 > 0) > 0
+                if sum(eP > 0) > 0 || sum(eP1 < 0) > 0
                     disp('The problem is infeasible.');
                     set(prob,'gamma',-1);
+                    prob.H   = -1;
                 else
                     disp(['The problem is feasible: gamma = ',num2str(prob.gamma)]);
+                    prob.H   = iqcdec2mat(prob,H)^-1;
                 end
+            else
+                prob.H   = iqcdec2mat(prob,H)^-1;
             end
         else
             disp('The solver thinks the problem is infeasible.')
+            prob.H   = -1;
         end
     case 'e2z'
         if norm(M.d(cho,:)) > 1e-15
@@ -615,6 +605,9 @@ switch pm
         else
             M.d(cho,:) = 0*M.d(cho,:);
         end
+
+        % Extract alp from DeltaP 
+        alp            = prob.alp;
         
         % Construct extended plant compatible with the structure of "Pi"
         Mex            = fplantex(M(1:end-length(cho),:),IO);
@@ -626,7 +619,7 @@ switch pm
         nxpsi          = size(Psi.a,1);
         B              = fss2m(G);
         sB             = size(B,2)-length(chi);
-        A              = fJt(length(chi),sB)*fJt(length(chi),sB)';
+        A              = alp^2*fJt(length(chi),sB)*fJt(length(chi),sB)';
         B1             = [eye(length(cho)+nxpsi+nxp);zeros(nxpsi,length(cho)),Tz,zeros(nxpsi,nxp)];
         A1             = -fOblkdiag(M.c(cho,:),zeros(nxpsi));
         Tg             = ones(length(cho)+1,1);
@@ -665,17 +658,17 @@ switch pm
                 if sum(eP > 0) > 0 || sum(eP1 < 0) > 0
                     disp('The problem is infeasible.');
                     set(prob,'gamma',-1);
+                    prob.H   = -1;
                 else
                     disp(['The problem is feasible: gamma = ',num2str(prob.gamma)]);
-                    prob.alp  = sqrt(prob.gamma);
-                    prob.Hinv = iqcdec2mat(prob,H)^-1;
+                    prob.H   = iqcdec2mat(prob,H)^-1;
                 end
             else
-                prob.alp  = sqrt(prob.gamma);
-                prob.Hinv = iqcdec2mat(prob,H)^-1;
+                prob.H   = iqcdec2mat(prob,H)^-1;
             end
         else
             disp('The solver thinks the problem is infeasible.')
+            prob.H   = -1;
         end 
 end
 end

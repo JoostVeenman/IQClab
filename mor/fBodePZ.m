@@ -1,13 +1,12 @@
 function fBodePZ(w,fignr,G1,sty1,leg1,G2,sty2,leg2)
 % -------------------------------------------------------------------------
 %
-% IQClab:      Version 3.4.0
 % Copyright:   This is copyrighted material owned by Novantec B.V.
-% Terms:       IQClab is available for non-commercial usage under a
-%              Creative Commons (Attribution-NoDerivatives 4.0
-%              International (CC BY-ND 4.0)) license:  
-%              https://creativecommons.org/licenses/by-nd/4.0/
+% Terms:       IQClab is available under a Creative Commons
+%              (Attribution-NoDerivatives 4.0 International (CC BY-ND 4.0))
+%              license: https://creativecommons.org/licenses/by-nd/4.0/
 %              For further information please visit iqclab.eu
+%
 % Author:      J.Veenman
 % Date:        13-03-2020
 % 

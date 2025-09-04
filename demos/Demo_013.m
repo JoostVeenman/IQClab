@@ -1,12 +1,11 @@
 % -------------------------------------------------------------------------
 %
-% IQClab:      Version 3.4.0
 % Copyright:   This is copyrighted material owned by Novantec B.V.
-% Terms:       IQClab is available for non-commercial usage under a
-%              Creative Commons (Attribution-NoDerivatives 4.0
-%              International (CC BY-ND 4.0)) license:  
-%              https://creativecommons.org/licenses/by-nd/4.0/
+% Terms:       IQClab is available under a Creative Commons
+%              (Attribution-NoDerivatives 4.0 International (CC BY-ND 4.0))
+%              license: https://creativecommons.org/licenses/by-nd/4.0/
 %              For further information please visit iqclab.eu
+%
 % Author:      J.Veenman
 % Date:        16-04-2022
 % 
@@ -54,16 +53,13 @@ N               = lft(de,M);
 % Perform the IQC analysis
 k               = [1,2,3,4];
 
-alp             = 1;
-clear Hinv
+clear H
 for i  = 1:length(k)
     u           = iqcdelta('u','InputChannel',1,'OutputChannel',1,'Bounds',[-1,1]);
     u           = iqcassign(u,'ultis','Length',k(i),'RelaxationType','PR');
     p           = iqcdelta('p','InputChannel',2,'OutputChannel',2:3,'ChannelClass','P','PerfMetric','e2z');
-    iv          = iqcinvariance(G,{u,p},'SolChk','on','eps',1e-6);
-    ga(i)       = iv.gamma;
-    alp(i)      = iv.alp;
-    Hinv{i}     = iv.Hinv;
+    iv          = iqcinvariance(G,{u,p},'SolChk','on','eps',1e-6,'alp',1);    
+    H{i}        = iv.H;
 end
 
 % Plot the ellipsoidal regions
@@ -71,13 +67,13 @@ clu             = [1;lft(-1,G)];
 C               = clu.c(2:end,:);
 W               = lyap(clu.a,clu.b*clu.b');
 Wi              = W^-1;
-H               = C*W*C';
-[V,D]           = eig(H);
+Hp              = C*W*C';
+[V,D]           = eig(Hp);
 la1             = sqrt(D(1,1));
 la2             = sqrt(D(2,2));
 t               = linspace(0,2*pi,100);
 rell            = V*[la1*cos(t);la2*sin(t)]; 
-K               = null(Wi-C'/H*C);
+K               = null(Wi-C'/Hp*C);
 F               = -clu.b'*Wi;
 [A,B,C,D]       = ssdata(clu);
 clc             = ss(-A+B*F,-B,C+D*F,D);
@@ -92,9 +88,9 @@ figure(1);
 plot(rell(1,:),rell(2,:),'linewidth',2,'color','k','LineWidth',1);hold on
 
 sty             = {'r-','r--','r:','r-.'};
-for q = 1:length(Hinv)
-    H           = Hinv{q}^-1;
-    [V,D]       = eig(H);
+for q = 1:length(H)
+    Hi          = H{q}^-1;
+    [V,D]       = eig(Hi);
     la1         = sqrt(D(1,1));
     la2         = sqrt(D(2,2));
     rell        = V*[la1*cos(t);la2*sin(t)]; 

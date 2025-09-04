@@ -1,5 +1,5 @@
 disp('-------------------------------------------------------------------');
-disp('                          IQClab v3.4.0                            ');
+disp('                          IQClab v3.5.0                            ');
 disp('-------------------------------------------------------------------');
 disp('Thanks for considering IQClab, your gateway for robustness analysis');
 disp('and control design. Please visit www.iqclab.eu for the user manual,');

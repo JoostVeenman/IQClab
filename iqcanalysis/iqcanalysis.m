@@ -1,15 +1,19 @@
 function prob = iqcanalysis(M,Delta,varargin)
 % -------------------------------------------------------------------------
 %
-% IQClab:      Version 3.4.0
 % Copyright:   This is copyrighted material owned by Novantec B.V.
-% Terms:       IQClab is available for non-commercial usage under a
-%              Creative Commons (Attribution-NoDerivatives 4.0
-%              International (CC BY-ND 4.0)) license:  
-%              https://creativecommons.org/licenses/by-nd/4.0/
+% Terms:       IQClab is available under a Creative Commons
+%              (Attribution-NoDerivatives 4.0 International (CC BY-ND 4.0))
+%              license: https://creativecommons.org/licenses/by-nd/4.0/
 %              For further information please visit iqclab.eu
+%
 % Author:      J.Veenman
-% Date:        23-12-2019
+% Date:        23-12-2019 Initial release
+%              02-09-2025 Added patch handle nominal systems as well (i.e.,
+%                         for the case that Delta is defined by just a
+%                         performance block. In addition, if only M is
+%                         provided as input, nominal stability can be
+%                         checked. 
 % 
 % -------------------------------------------------------------------------
 %
@@ -64,16 +68,21 @@ elseif length(varargin) > 1
     eval(te)
 end
 
-if isobject(Delta)
-   U{1}          = Delta;
-   Delta         = U;
+DE               = exist('Delta','var');
+if DE
+    if isobject(Delta)
+       U{1}      = Delta;
+       Delta     = U;
+    end
+else
+    Delta        = {};
 end
 
 % Sort performance and uncertainty blocks
 k                = 1;
 j                = 1;
 for i = 1:length(Delta)
-    if strcmp(class(Delta{i}),'iqcdelta')
+    if isa(Delta{i},'iqcdelta')
         if strcmp(Delta{i}.ChannelClass{1},'P')
             DeltaP{k} = Delta{i};
             k         = k + 1;
@@ -85,10 +94,15 @@ for i = 1:length(Delta)
        j         = j + 1;
     end
 end
-if k == 1
-    Delta        = DeltaU;
-else
+
+DU               = exist('DeltaU','var');
+DP               = exist('DeltaP','var');
+if DU && DP
     Delta        = [DeltaU,DeltaP];
+elseif DU && ~DP
+    Delta        = DeltaU;
+elseif ~DU && DP
+    Delta        = DeltaP;
 end
 
 % Permute plant in- and output channels according to the delta structure
@@ -103,7 +117,9 @@ end
 if sum(sum(To) > 1) || sum(sum(To.') > 1) || sum(sum(Ti) > 1) || sum(sum(Ti.') > 1)
    error('Error: At least 1 plant in- or output channel was assigned twice or more.');
 end
-M                = To*M*Ti;
+if ~isempty(To) && ~isempty(Ti)
+    M             = To*M*Ti;
+end
 
 % Get sample time plant M
 Ts               = M.Ts;
@@ -475,10 +491,15 @@ switch pm
         end
     case 'RS'
         % Construct the main LMI matrices
-        Psi_sc  = ss(sc*Psi);Psi_sc.Ts = Ts;
-        G       = fmultss(Psi_sc,Mex);
-        A       = fss2m(G);
-        
+        if isempty(Psi)
+            G      = Mex;
+            A      = [eye(size(M.a,1));M.a];
+        else
+            Psi_sc = ss(sc*Psi);Psi_sc.Ts = Ts;
+            G      = fmultss(Psi_sc,Mex);
+            A      = fss2m(G);
+        end
+
         % Define LMI variables
         X       = iqcvar(prob,[size(G.a,1),size(G.a,1)],'symmetric');
         P       = get(prob,'P');

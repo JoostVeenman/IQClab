@@ -1,13 +1,12 @@
 function d = fJt(a,b,c)
 % -------------------------------------------------------------------------
 %
-% IQClab:      Version 3.4.0
 % Copyright:   This is copyrighted material owned by Novantec B.V.
-% Terms:       IQClab is available for non-commercial usage under a
-%              Creative Commons (Attribution-NoDerivatives 4.0
-%              International (CC BY-ND 4.0)) license:  
-%              https://creativecommons.org/licenses/by-nd/4.0/
+% Terms:       IQClab is available under a Creative Commons
+%              (Attribution-NoDerivatives 4.0 International (CC BY-ND 4.0))
+%              license: https://creativecommons.org/licenses/by-nd/4.0/
 %              For further information please visit iqclab.eu
+%
 % Author:      J.Veenman
 % Date:        07-04-2011
 % 
@@ -18,7 +17,7 @@ function d = fJt(a,b,c)
 %              d = [I] dim a x a
 %                  [0] dim c x a
 %
-% Syntax:      d = fCutFig(n,m)
+% Syntax:      d = fJt(a,b,c)
 %
 % Usage:       1.) if nargin = 1:  d = [ 0_{a x a} ]
 %                                      [ I_a       ]

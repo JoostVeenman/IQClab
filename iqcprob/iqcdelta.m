@@ -1,14 +1,13 @@
 classdef iqcdelta < matlab.mixin.SetGetExactNames
 
-    % -------------------------------------------------------------------------
+% -------------------------------------------------------------------------
 %
-% IQClab:      Version 3.4.0
 % Copyright:   This is copyrighted material owned by Novantec B.V.
-% Terms:       IQClab is available for non-commercial usage under a
-%              Creative Commons (Attribution-NoDerivatives 4.0
-%              International (CC BY-ND 4.0)) license:  
-%              https://creativecommons.org/licenses/by-nd/4.0/
+% Terms:       IQClab is available under a Creative Commons
+%              (Attribution-NoDerivatives 4.0 International (CC BY-ND 4.0))
+%              license: https://creativecommons.org/licenses/by-nd/4.0/
 %              For further information please visit iqclab.eu
+%
 % Author:      J.Veenman
 % Date:        29-11-2019
 % 
@@ -187,11 +186,7 @@ classdef iqcdelta < matlab.mixin.SetGetExactNames
 %                    metric for the performance channels.
 %
 %                    a.) PerfMetric = 'L2', 'H2', 'genH2', 'Passive',
-%                                     'e2x', 'e2p', 'x2p', 'e2y'
-%
-%              13.) 'Xinit' is a vector that specifies the non-zero
-%                    elements of the initial condition x0. This option can
-%                    be applies for the performance metric 'x2p'.
+%                                     'e2x', 'e2p', 'x2z', 'e2y'
 %
 %          ----------------------------------------------------------------
 %               D.) Combining uncertainty blocks
@@ -235,8 +230,7 @@ properties (SetAccess = public)
     DelayType      cell                                                                                       = {[]};    % Delay type
     Passive        string {mustBeMember(Passive,{'Passive',''})}                                              = {''};    % Passiveness of the uncertainty
     Odd            string {mustBeMember(Odd,{'yes','no',''})}                                                 = {''};    % Specify if a nonlinearity is an odd or even function
-    PerfMetric     string {mustBeMember(PerfMetric,{'L2','H2','genH2','Passive','e2x','e2p','x2p','e2z',''})} = {'L2'};  % Performance metric
-    Xinit          double                                                                                     = [];      % Vector Selecting the non-zero elements of the initial condition x0
+    PerfMetric     string {mustBeMember(PerfMetric,{'L2','H2','genH2','Passive','e2x','e2p','x2z','e2z',''})} = {'L2'};  % Performance metric
 end
 methods
     function obj = iqcdelta(varargin)
@@ -440,9 +434,6 @@ methods
             if isfield(varargin{2},'PerfMetric')
                 obj.PerfMetric            = varargin{2}.PerfMetric;
             end
-            if isfield(varargin{2},'Xinit')
-                obj.Xinit                 = varargin{2}.Xinit;
-            end
         elseif nargin > 2 % specify properties via input-pairs
             if ischar(varargin{1})
                 obj.Name = varargin{1};
@@ -619,8 +610,6 @@ methods
                         end    
                     case 'PerfMetric'
                         obj.PerfMetric            = varargin{j(i)};
-                    case 'Xinit'
-                        obj.Xinit                 = varargin{j(i)};
                 end
             end    
         end

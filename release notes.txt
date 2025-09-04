@@ -1,3 +1,9 @@
+IQClab V3.5.0
+- Added function fRefine for refining parameter bounds based on data collected from the new system
+- Added Demo_016
+- Patched functions iqcanalysis and iqcinvariance to enable analysis for nominal systems and some additional bug fixes for iqcinvariance
+- Updated license statement in all files
+
 IQClab V3.4.0
 - Changed licensing from creative commons CC BY-NC-ND 4.0 to CC BY-ND 4.0
 - Added function sensanalysis for performing parametric sensitivity analysis

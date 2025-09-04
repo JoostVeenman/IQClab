@@ -2,13 +2,12 @@ classdef iqcinvar < iqcprob
     
 % -------------------------------------------------------------------------
 %
-% IQClab:      Version 3.4.0
 % Copyright:   This is copyrighted material owned by Novantec B.V.
-% Terms:       IQClab is available for non-commercial usage under a
-%              Creative Commons (Attribution-NoDerivatives 4.0
-%              International (CC BY-ND 4.0)) license:  
-%              https://creativecommons.org/licenses/by-nd/4.0/
+% Terms:       IQClab is available under a Creative Commons
+%              (Attribution-NoDerivatives 4.0 International (CC BY-ND 4.0))
+%              license: https://creativecommons.org/licenses/by-nd/4.0/
 %              For further information please visit iqclab.eu
+%
 % Author:      J.Veenman
 % Date:        26-04-2022
 % 
@@ -51,21 +50,16 @@ classdef iqcinvar < iqcprob
 %
 %              The properties that can be specified are:
 %            
-%                1.) 'alp' specifies the L2-bound on the external
-%                    disturbance w\in D_alp = {w\in L_2: ||w|| \leq0}
+%                1.) 'alp' specifies the L2-energy bound on the external
+%                    disturbance w\in D_alp = {w\in L_2: ||w||_2\leq\alp}
 %                    (Default: 1)
-%
-%                2.) 'Tx0' specifies the non-zero elements of the initial
-%                    state x0 (Default: [])
 %
 %              The properties that are obtained by an IQC-invariance
 %              analysis are (depending on the scenario ('InvarCase')):
 %
-%                1.) 'alp' being the bound on the hyper ellipsoid Hinv:
-%                    x(t)\in{x\in R^n: x^T Hinv x \leq alp^2}
-%
-%                2.) 'Hinv' defining the hyper ellipsoid region:
-%                    x(t)\in{x\in R^n: x^T Hinv x \leq alp^2}
+%                2.) 'H' defining the hyper ellipsoid region:
+%                    x(t)\in{x\in R^n: x^T H x \leq something depending on
+%                    the selected performance criteria} 
 %
 %                3.) 'PeakGain' being the peak gain on the performance
 %                    channels
@@ -76,15 +70,13 @@ classdef iqcinvar < iqcprob
 properties
     % L2-bound on the disturbance input w
     alp       double {mustBeReal,mustBeFinite} = 1;
-    
-    % Tx0 selects the (non-zero) elements of initial state x0
-    Tx0       double {mustBeReal,mustBeFinite} = [];
 end
 
 % internal properties
 properties
-    % Inverse of the hyper ellipsoidal variable H
-    Hinv      double {mustBeReal,mustBeFinite} = [];
+    
+    % The hyper ellipsoidal variable H
+    H         double {mustBeReal,mustBeFinite} = [];
     
     % Peak gain bounds on performance channel w->z
     PeakGain  double {mustBeReal,mustBeFinite} = [];
@@ -107,13 +99,6 @@ methods
                     error('Error: The option "alp" should be defined as a real positive scalar (Default = 1).');
                 end
             end
-            if isfield(varargin{1},'Tx0')
-                if isreal(varargin{1}.Tx0) && ismatrix(varargin{1}.Tx0)
-                    obj.alp = varargin{1}.Tx0;
-                else
-                    error('Error: The option "Tx0" should be defined as a vector that selects the non-zero elements of the initial condition x0 (Default = []).');
-                end
-            end
         elseif nargin > 1
             n = length(varargin);
             if mod(n,2) ~= 0
@@ -129,13 +114,7 @@ methods
                             obj.alp = varargin{j(i)};
                         else
                             error('Error: The option "alp" should be defined as a real positive scalar (Default = 1).');
-                        end
-                    case 'Tx0'
-                        if isreal(varargin{j(i)}) && ismatrix(varargin{j(i)})
-                            obj.Tx0 = varargin{j(i)};
-                        else
-                            error('Error: The option "Tx0" should be defined as a vector that selects the non-zero elements of the initial condition x0 (Default = []).');
-                        end
+                        end                    
                 end
             end
         end
