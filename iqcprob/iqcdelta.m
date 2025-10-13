@@ -186,7 +186,7 @@ classdef iqcdelta < matlab.mixin.SetGetExactNames
 %                    metric for the performance channels.
 %
 %                    a.) PerfMetric = 'L2', 'H2', 'genH2', 'Passive',
-%                                     'e2x', 'e2p', 'x2z', 'e2y'
+%                                     'e2x', 'e2p', 'x2z', 'e2z', 'x2p'
 %
 %          ----------------------------------------------------------------
 %               D.) Combining uncertainty blocks
@@ -230,7 +230,7 @@ properties (SetAccess = public)
     DelayType      cell                                                                                       = {[]};    % Delay type
     Passive        string {mustBeMember(Passive,{'Passive',''})}                                              = {''};    % Passiveness of the uncertainty
     Odd            string {mustBeMember(Odd,{'yes','no',''})}                                                 = {''};    % Specify if a nonlinearity is an odd or even function
-    PerfMetric     string {mustBeMember(PerfMetric,{'L2','H2','genH2','Passive','e2x','e2p','x2z','e2z',''})} = {'L2'};  % Performance metric
+    PerfMetric     string {mustBeMember(PerfMetric,{'L2','H2','genH2','Passive','e2x','e2p','x2z','e2z','x2p',''})} = {'L2'};  % Performance metric
 end
 methods
     function obj = iqcdelta(varargin)

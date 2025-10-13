@@ -70,6 +70,12 @@ classdef iqcinvar < iqcprob
 properties
     % L2-bound on the disturbance input w
     alp       double {mustBeReal,mustBeFinite} = 1;
+
+    % Weighting matrix for the initial state x0^TWx0x0
+    Wx0       double {mustBeReal,mustBeFinite} = [];
+
+    % State selection matrix for the constraint T^TXT < W
+    Tx0       double {mustBeReal,mustBeFinite} = [];
 end
 
 % internal properties
@@ -99,6 +105,20 @@ methods
                     error('Error: The option "alp" should be defined as a real positive scalar (Default = 1).');
                 end
             end
+            if isfield(varargin{1},'Wx0')
+                if isreal(varargin{1}.Wx0) && ismatrix(varargin{1}.Wx0) && norm(varargin{1}.Wx0-varargin{1}.Wx0') == 0 && sum(real(eig(varargin{1}.Wx0))<=0) == 0
+                    obj.Wx0 = varargin{1}.Wx0;
+                else
+                    error('Error: The option "Wx0" should be defined as a (real) positive definite matrix (Default = []).');
+                end
+            end
+            if isfield(varargin{1},'Tx0')
+                if isreal(varargin{1}.Tx0) && ismatrix(varargin{1}.Tx0)
+                    obj.Tx0 = varargin{1}.Tx0;
+                else
+                    error('Error: The option "Tx0" should be defined as a selection matrixes consisting of unit vectors (Default = []).');
+                end
+            end
         elseif nargin > 1
             n = length(varargin);
             if mod(n,2) ~= 0
@@ -114,7 +134,19 @@ methods
                             obj.alp = varargin{j(i)};
                         else
                             error('Error: The option "alp" should be defined as a real positive scalar (Default = 1).');
-                        end                    
+                        end
+                    case 'Wx0'
+                        if isreal(varargin{j(i)}) && ismatrix(varargin{j(i)}) && norm(varargin{j(i)}-varargin{j(i)}') == 0 && sum(real(eig(varargin{j(i)}))<=0) == 0
+                            obj.Wx0 = varargin{j(i)};
+                        else
+                            error('Error: The option "Wx0" should be defined as a (real) positive definite matrix (Default = []).');
+                        end
+                    case 'Tx0'
+                        if isreal(varargin{j(i)}) && ismatrix(varargin{j(i)})
+                            obj.Tx0 = varargin{j(i)};
+                        else
+                            error('Error: The option "Tx0" should be defined as a selection matrixes consisting of unit vectors (Default = []).');
+                        end
                 end
             end
         end
