@@ -239,6 +239,27 @@ end
 disp('-------------------------------------------------------------------');
 disp(['Uncertain plant with ' num2str(size(M,2)) ' inputs, ' num2str(size(M,1)) ' outputs, and ', num2str(size(M.a,1)),' states.']);
 
+% Extract alp from DeltaP 
+alp              = prob.alp;
+
+% Extract Tx0
+Tx0              = prob.Tx0;
+if isempty(Tx0)
+    Tx0          = eye(size(M.a,1));
+end
+
+% Extract Wx0
+Wx0              = prob.Wx0;
+if isempty(Wx0)
+    Wx0          = eye(size(M.a,1));
+end
+if size(Tx0,1) ~= size(M.a,1)
+    error('Tx0 should have as many row as M has states.');
+end
+if size(Tx0,2) ~= size(Wx0,1)
+    error('Wx0 should have as many colums as Tx0 has rows.');
+end
+
 % Construct IQC-multipliers
 k                = 1;
 pm               = [0,0,0,0,0];
@@ -327,13 +348,15 @@ for i = 1:length(Delta)
             end
         case 'iqcdelta'
             if strcmp(Delta{i}.PerfMetric,'e2x')
-                pm(k,1:4) = [1,0,0,0];
+                pm(k,1:5) = [1,0,0,0,0];
             elseif strcmp(Delta{i}.PerfMetric,'e2p')
-                pm(k,1:4) = [0,1,0,0];
+                pm(k,1:5) = [0,1,0,0,0];
             elseif strcmp(Delta{i}.PerfMetric,'x2z') 
-                pm(k,1:4) = [0,0,1,0];
+                pm(k,1:5) = [0,0,1,0,0];
             elseif strcmp(Delta{i}.PerfMetric,'e2z') 
-                pm(k,1:4) = [0,0,0,1];
+                pm(k,1:5) = [0,0,0,1,0];
+            elseif strcmp(Delta{i}.PerfMetric,'x2p') 
+                pm(k,1:5) = [0,0,0,0,1];
             else
                 error('Please consider the function iqcanalysis for this type of performance metrics');
             end
@@ -351,15 +374,17 @@ if size(pm,1) > 1
 else
     spm = pm;
 end
-if      spm(1) > 0 && spm(2) == 0 && spm(3) == 0 && spm(4) == 0
+if      spm(1) > 0 && spm(2) == 0 && spm(3) == 0 && spm(4) == 0 && spm(5) == 0
     pm  = 'e2x';
-elseif spm(1) == 0 && spm(2) > 0  && spm(3) == 0 && spm(4) == 0
+elseif spm(1) == 0 && spm(2) > 0  && spm(3) == 0 && spm(4) == 0 && spm(5) == 0
     pm  = 'e2p';
-elseif spm(1) == 0 && spm(2) == 0 && spm(3) > 0  && spm(4) == 0
+elseif spm(1) == 0 && spm(2) == 0 && spm(3) > 0  && spm(4) == 0 && spm(5) == 0
     pm  = 'x2z';
-elseif spm(1) == 0 && spm(2) == 0 && spm(3) == 0 && spm(4) > 0
+elseif spm(1) == 0 && spm(2) == 0 && spm(3) == 0 && spm(4) > 0  && spm(5) == 0
     pm  = 'e2z';
-elseif spm(1) == 0 && spm(2) == 0 && spm(3) == 0 && spm(4) == 0
+elseif spm(1) == 0 && spm(2) == 0 && spm(3) == 0 && spm(4) == 0 && spm(5) > 0
+    pm  = 'x2p';
+elseif spm(1) == 0 && spm(2) == 0 && spm(3) == 0 && spm(4) == 0 && spm(4) == 0
     error('Please consider the function iqcanalysis for checking robust stability.');
 else
     error('Error: It is only possible to consider one single performance metric in the IQC-analyis');
@@ -388,9 +413,6 @@ Tz      = get(prob,'Tz');
 
 switch pm
     case 'e2x'
-        % Extract alp from DeltaP 
-        alp            = prob.alp;
-        
         % Construct extended plant compatible with the structure of "Pi"
         Mex            = fplantex(M,IO);
         
@@ -458,9 +480,7 @@ switch pm
         else
             M.d(cho,:) = 0*M.d(cho,:);
         end
-        % Extract alp from DeltaP 
-        alp            = prob.alp;
-        
+
         % Construct extended plant compatible with the structure of "Pi"
         Mex            = fplantex(M(1:end-length(cho),:),IO);
         
@@ -474,7 +494,7 @@ switch pm
         A              = alp^2*fJt(length(chi),sB)*fJt(length(chi),sB)';
         B1             = [eye(1+nxpsi+nxp);zeros(nxpsi,1),Tz,zeros(nxpsi,nxp)];
         for i = 1:length(cho)
-            A1{i}      = -fOblkdiag(M.c(cho(i),:),zeros(nxpsi));    
+            A1{i}      = -fOblkdiag(M.c(cho(i),:),zeros(nxpsi));
         end
         Tg             = ones(length(cho)+1,1);
 
@@ -534,9 +554,7 @@ switch pm
         else
             M.d(cho,:) = 0*M.d(cho,:);
         end
-        % Extract alp from DeltaP 
-        alp            = prob.alp;
-
+        
         % Construct extended plant compatible with the structure of "Pi"
         Mex            = fplantex(M(1:end-length(cho),:),IO);
         G              = fmultss(Psi,Mex);
@@ -564,7 +582,7 @@ switch pm
         prob           = iqclmi(prob,gamma,1);
         prob           = iqclmi(prob,V,-1,0,B);
         prob           = iqclmi(prob,V1,1,A1,B1);
-        prob           = iqclmi(prob,X22,-1,alp*eye(size(M.a,1)));
+        prob           = iqclmi(prob,X22,-1,Wx0,Tx0);
         prob           = iqclmi(prob,Vg,-1,0,Tg);
         prob           = iqclmi(prob,gamma,-1,get(prob,'gmax'));
         
@@ -599,15 +617,89 @@ switch pm
             disp('The solver thinks the problem is infeasible.')
             prob.H   = -1;
         end
+    case 'x2p'
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        if norm(M.d(cho,:)) > 1e-15
+            error('The uncertain plant must be strictly proper from all inputs to all performnace outputs.');
+        else
+            M.d(cho,:) = 0*M.d(cho,:);
+        end
+        
+        % Construct extended plant compatible with the structure of "Pi"
+        Mex            = fplantex(M(1:end-length(cho),:),IO);
+        G              = fmultss(Psi,Mex);
+        
+        % Construct the main LMI matrices
+        nx             = size(G.a,1);
+        nxp            = size(Mex.a,1);
+        nxpsi          = size(Psi.a,1);
+        B              = fss2m(G);
+        B1             = [eye(1+nxpsi+nxp);zeros(nxpsi,1),Tz,zeros(nxpsi,nxp)];
+        for i = 1:length(cho)
+            A1{i}      = -fOblkdiag(M.c(cho(i),:),zeros(nxpsi));
+        end
+        Tg             = ones(length(cho)+1,1);
+
+        % Define LMI variables
+        gamma          = iqcvar(prob,[1,1],'symmetric');
+        X              = iqcvar(prob,[nx,nx],'symmetric');
+        X22            = X(nxpsi+1:X.Dim(1),nxpsi+1:X.Dim(1));
+        gn             = iqcvar(prob,[length(cho),1],'full');
+        dgn            = diag(gn);
+        V              = blkdiag(kron(kyp,X),P);
+        for i = 1:length(cho)
+            V1{i}      = blkdiag(dgn(i,i),X,-Z);
+        end
+        Vg             = blkdiag(dgn,-gamma);
+
+        % Define LMIs
+        prob           = iqclmi(prob,gamma,1);
+        prob           = iqclmi(prob,V,-1,0,B);
+        for i = 1:length(cho)
+            prob       = iqclmi(prob,V1{i},1,A1{i},B1);
+        end
+        prob           = iqclmi(prob,X22,-1,Wx0,Tx0);
+        prob           = iqclmi(prob,Vg,-1,0,Tg);        
+        prob           = iqclmi(prob,gamma,-1,get(prob,'gmax'));
+        
+        prob           = iqcsolve(prob,gamma);
+
+        if prob.gamma ~= -1
+            % Check solution
+            disp('The solver thinks the problem is feasible.')
+            if strcmp(prob.SolChk,'on')
+                eps    = 1e-14;
+                Vn     = iqcdec2mat(prob,V);
+                eP     = eig(B'*Vn*B+eps*eye(size(B,2)));
+                eP1    = [];
+                for i = 1:length(cho)
+                    V1n{i} = iqcdec2mat(prob,V1{i});
+                    eP1    = [eP1;eig(B1'*V1n{i}*B1-A1{i}-eps*eye(size(B1,2)))];
+                end
+                disp('-------------------------------------------------------------------');
+                disp('Perform a solution check: ...')
+                if sum(eP > 0) > 0 || sum(eP1 < 0) > 0
+                    disp('The problem is infeasible.');
+                    set(prob,'gamma',-1);
+                    prob.PeakGain = -ones(size(gn.svar,1),1);
+                else
+                    disp(['The problem is feasible: gamma = ',num2str(prob.gamma)]);
+                    prob.PeakGain = sqrt(iqcdec2mat(prob,gn));
+                end
+            else
+                prob.PeakGain = sqrt(iqcdec2mat(prob,gn));
+            end
+        else
+            disp('The solver thinks the problem is infeasible.')
+            prob.PeakGain = -ones(size(gn.svar,1),1);
+        end
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%        
     case 'e2z'
         if norm(M.d(cho,:)) > 1e-15
             error('The uncertain plant must be strictly proper from all inputs to all performnace outputs.');
         else
             M.d(cho,:) = 0*M.d(cho,:);
         end
-
-        % Extract alp from DeltaP 
-        alp            = prob.alp;
         
         % Construct extended plant compatible with the structure of "Pi"
         Mex            = fplantex(M(1:end-length(cho),:),IO);
