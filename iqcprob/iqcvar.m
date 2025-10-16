@@ -10,6 +10,9 @@ classdef iqcvar < matlab.mixin.SetGetExactNames
 %
 % Author:      J.Veenman
 % Date:        24-11-2019
+% Date:        16-10-2025 - patched error for Matlab versions 2024b.
+%                           Couldn't create empty LMI variables of type 1
+%                           and 2 with command lmivar.
 % 
 %--------------------------------------------------------------------------
 %
@@ -96,11 +99,27 @@ methods
             elseif strcmp(ptype,'LMIlab')
                 switch type
                     case {'symmetric'}
-                        [obj.var,obj.nvar,obj.svar]     = lmivar(1,[dim(1) 1]);
+                        if dim(1) == 0
+                            obj.var                     = [];
+                            obj.nvar                    = [];
+                            obj.svar                    = [];
+                            obj.Parser                  = 'LMIlab';
+                            obj.Dim                     = [];
+                        else
+                            [obj.var,obj.nvar,obj.svar] = lmivar(1,[dim(1) 1]);
+                        end
                         obj.Parser                      = 'LMIlab';
                         obj.Dim                         = [dim(1),dim(2)];
                     case {'full'}
-                        [obj.var,obj.nvar,obj.svar]     = lmivar(2,[dim(1),dim(2)]);
+                        if dim(1) == 0 || dim(2) == 0
+                            obj.var                     = [];
+                            obj.nvar                    = [];
+                            obj.svar                    = [];
+                            obj.Parser                  = 'LMIlab';
+                            obj.Dim                     = [];
+                        else
+                            [obj.var,obj.nvar,obj.svar]     = lmivar(2,[dim(1),dim(2)]);
+                        end
                         obj.Parser                      = 'LMIlab';
                         obj.Dim                         = [dim(1),dim(2)];
                     case {'skew'}
@@ -117,7 +136,7 @@ methods
                             obj.Parser                  = 'LMIlab';
                             obj.Dim                     = [1,1];
                         elseif dim(1) > 1
-                            [obj.var,obj.nvar,obj.svar] = lmivar(1,[0 1]);
+                            [obj.var,obj.nvar,obj.svar] = lmivar(1,[1 1]);
                             [obj.var,obj.nvar,obj.svar] = lmivar(3,skewdec(dim(1),obj.nvar));
                             obj.Parser                  = 'LMIlab';
                             obj.Dim                     = [dim(1),dim(2)];
