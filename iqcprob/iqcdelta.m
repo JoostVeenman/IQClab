@@ -10,6 +10,7 @@ classdef iqcdelta < matlab.mixin.SetGetExactNames
 %
 % Author:      J.Veenman
 % Date:        29-11-2019
+%              20-10-2025: Added error message in case of wrong inputs
 % 
 % -------------------------------------------------------------------------
 %
@@ -204,33 +205,34 @@ classdef iqcdelta < matlab.mixin.SetGetExactNames
 
 % Properties related to the channel selection
 properties  (SetAccess = private)
-    Name           string                                                                                     = 'delta'; % Name uncertainty
-    ChannelClass   string {mustBeMember(ChannelClass,{'U','P','C'})}                                          = 'U';     % Uncertainty (U), Performance (P), or Control (C) channel
-    InputChannel   cell                                                                                       = {};      % Input channel selection plant M of LFT(Delta,M)
-    OutputChannel  cell                                                                                       = {};      % Output channel selection plant M of LFT(Delta,M)
+    Name           string                                                            = 'delta'; % Name uncertainty
+    ChannelClass   string {mustBeMember(ChannelClass,{'U','P','C'})}                 = 'U';     % Uncertainty (U), Performance (P), or Control (C) channel
+    InputChannel   cell                                                              = {};      % Input channel selection plant M of LFT(Delta,M)
+    OutputChannel  cell                                                              = {};      % Output channel selection plant M of LFT(Delta,M)
 end
 
 % Properties related to the nature of the uncertainty/performance channels
 properties (SetAccess = private)   
-    LinNonlin      cell                                                                                       = {'L'};   % Linear (L) or NonLinear (NL)
-    TimeInvTimeVar cell                                                                                       = {'TI'};  % Time-Invariant (TI) or Time-Varying (TV)
-    StaticDynamic  cell                                                                                       = {'S'};   % Static (S) or Dynamnic (D)
-    Structure      cell                                                                                       = {'D'};   % Diagonal (D) or FullBlock (FB)
+    LinNonlin      cell                                                              = {'L'};   % Linear (L) or NonLinear (NL)
+    TimeInvTimeVar cell                                                              = {'TI'};  % Time-Invariant (TI) or Time-Varying (TV)
+    StaticDynamic  cell                                                              = {'S'};   % Static (S) or Dynamnic (D)
+    Structure      cell                                                              = {'D'};   % Diagonal (D) or FullBlock (FB)
 end
 % Properties related to the characteristics of uncertainties/performances
 properties (SetAccess = public)    
-    Bounds         cell                                                                                       = {[]};    % Bounds on the uncertainty (interval should contain 0)
-    RateBounds     cell                                                                                       = {[]};    % Rate bounds on the uncertainty  (interval should contain 0)
-    NormBounds     cell                                                                                       = {[]};    % Norm bounds on the uncertainty
-    SectorBounds   cell                                                                                       = {[]};    % Sector bounds of the uncertainty  (interval should contain 0)
-    SlopeBounds    cell                                                                                       = {[]};    % Slope restriction of the uncertainty
-    Polytope       double                                                                                     = [];      % Polytope defining uncertainty region (interval should contain 0)
-    UncertaintyMap cell                                                                                       = {};      % Uncertainty Mapping
-    DelayTime      cell                                                                                       = {[]};    % Delay time
-    DelayType      cell                                                                                       = {[]};    % Delay type
-    Passive        string {mustBeMember(Passive,{'Passive',''})}                                              = {''};    % Passiveness of the uncertainty
-    Odd            string {mustBeMember(Odd,{'yes','no',''})}                                                 = {''};    % Specify if a nonlinearity is an odd or even function
-    PerfMetric     string {mustBeMember(PerfMetric,{'L2','H2','genH2','Passive','e2x','e2p','x2z','e2z','x2p',''})} = {'L2'};  % Performance metric
+    Bounds         cell                                                              = {[]};    % Bounds on the uncertainty (interval should contain 0)
+    RateBounds     cell                                                              = {[]};    % Rate bounds on the uncertainty  (interval should contain 0)
+    NormBounds     cell                                                              = {[]};    % Norm bounds on the uncertainty
+    SectorBounds   cell                                                              = {[]};    % Sector bounds of the uncertainty  (interval should contain 0)
+    SlopeBounds    cell                                                              = {[]};    % Slope restriction of the uncertainty
+    Polytope       double                                                            = [];      % Polytope defining uncertainty region (interval should contain 0)
+    UncertaintyMap cell                                                              = {};      % Uncertainty Mapping
+    DelayTime      cell                                                              = {[]};    % Delay time
+    DelayType      cell                                                              = {[]};    % Delay type
+    Passive        string {mustBeMember(Passive,{'Passive',''})}                     = {''};    % Passiveness of the uncertainty
+    Odd            string {mustBeMember(Odd,{'yes','no',''})}                        = {''};    % Specify if a nonlinearity is an odd or even function
+    PerfMetric     string {mustBeMember(PerfMetric,{'L2','H2','genH2','Passive',...
+                                           'e2x','e2p','x2z','e2z','x2p',''})}       = {'L2'};  % Performance metric
 end
 methods
     function obj = iqcdelta(varargin)
@@ -610,6 +612,8 @@ methods
                         end    
                     case 'PerfMetric'
                         obj.PerfMetric            = varargin{j(i)};
+                    otherwise
+                        error(['Error: You cannot specify the option ',prop]);
                 end
             end    
         end

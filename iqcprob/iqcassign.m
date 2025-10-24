@@ -9,6 +9,7 @@ function obj = iqcassign(Delta,Multiplier,varargin)
 %
 % Author:      J.Veenman
 % Date:        29-11-2019
+%              20-10-2025: Added error message in case of wrong inputs
 % 
 % -------------------------------------------------------------------------
 %
@@ -164,6 +165,8 @@ switch Multiplier
                         set(obj,'TerminalCost',varargin{j(i)});
                     case 'PrimalDual'
                         set(obj,'PrimalDual',varargin{j(i)});
+                    otherwise
+                        error('Error: You can only specify the options "BasisFunctionType", "Length", "PoleLocation", "RelaxationType", "TerminalCost", and "PrimalDual" for this multiplier.');
                 end
             end
         end
@@ -236,8 +239,12 @@ switch Multiplier
                         else
                             error('Error: The pole location of a basis function should be defined as a real rational number. For continuous and distrete time systems, it is not allowed to have poles on the imaginary axis and unit circle respectively (see "help ultid" for further details).');
                         end
+                    case 'TerminalCost'
+                        set(obj,'TerminalCost',varargin{j(i)});
                     case 'PrimalDual'
                         set(obj,'PrimalDual',varargin{j(i)});
+                    otherwise
+                        error('Error: You can only specify the options "BasisFunctionType", "Length", "PoleLocation", "TerminalCost", and "PrimalDual" for this multiplier.');
                 end
             end
         end
@@ -291,6 +298,8 @@ switch Multiplier
                         set(obj,'RelaxationType',varargin{j(i)});
                     case 'PrimalDual'
                         set(obj,'PrimalDual',varargin{j(i)});
+                    otherwise
+                        error('Error: You can only specify the options "RelaxationType" and "PrimalDual" for this multiplier.');
                 end
             end
         end
@@ -356,8 +365,12 @@ switch Multiplier
                         set(obj,'AddIQC',varargin{j(i)});
                     case 'MstrictlyProp'
                         set(obj,'MstrictlyProp',varargin{j(i)});
+                    case 'TerminalCost'
+                        set(obj,'TerminalCost',varargin{j(i)});
                     case 'PrimalDual'
                         set(obj,'PrimalDual',varargin{j(i)});
+                    otherwise
+                        error('Error: You can only specify the options "BasisFunctionType", "Length", "PoleLocation", "AddIQC", "MstrictlyProper", "TerminalCost", and "PrimalDual" for this multiplier.');
                 end
             end
         end
@@ -461,8 +474,12 @@ switch Multiplier
                         end
                     case 'RelaxationType'
                         set(obj,'RelaxationType',varargin{j(i)});
+                    case 'TerminalCost'
+                        set(obj,'TerminalCost',varargin{j(i)});
                     case 'PrimalDual'
                         set(obj,'PrimalDual',varargin{j(i)});
+                    otherwise
+                        error('Error: You can only specify the options "BasisFunctionType", "Length", "PoleLocation", "RelaxationType", "TerminalCost", and "PrimalDual" for this multiplier.');
                 end
             end
         end
@@ -542,6 +559,10 @@ switch Multiplier
                         set(obj,'PrimalDual',varargin{j(i)});
                     case 'Odd'
                         set(obj,'Odd',varargin{j(i)});
+                    case 'TerminalCost'
+                        set(obj,'TerminalCost',varargin{j(i)});
+                    otherwise
+                        error('Error: You can only specify the options "BasisFunctionType", "Length", "PoleLocation", "Odd", "TerminalCost", and "PrimalDual" for this multiplier.');
                 end
             end
         end
@@ -591,8 +612,12 @@ switch Multiplier
                         else
                             error('Error: The pole location of a basis function should be defined as a real rational number. For continuous and distrete time systems, it is not allowed to have poles on the imaginary axis and unit circle respectively (see "help usg" for further details).');
                         end
+                    case 'TerminalCost'
+                        set(obj,'TerminalCost',varargin{j(i)});
                     case 'PrimalDual'
                         set(obj,'PrimalDual',varargin{j(i)});
+                    otherwise
+                        error('Error: You can only specify the options "BasisFunctionType", "Length", "PoleLocation", "TerminalCost", and "PrimalDual" for this multiplier.');
                 end
             end
         end
@@ -641,10 +666,16 @@ switch Multiplier
                         else
                             error('Error: The pole location of a basis function should be defined as a real rational number. For continuous and distrete time systems, it is not allowed to have poles on the imaginary axis and unit circle respectively (see "help ups" for further details).');
                         end
+                    case 'TerminalCost'
+                        set(obj,'TerminalCost',varargin{j(i)});
                     case 'PrimalDual'
                         set(obj,'PrimalDual',varargin{j(i)});
+                    otherwise
+                        error('Error: You can only specify the options "BasisFunctionType", "Length", "PoleLocation", "TerminalCost", and "PrimalDual" for this multiplier.');
                 end
             end
         end
+    otherwise
+        error(['You cannot specify this multiplier: ',Multiplier]);
 end
 end
