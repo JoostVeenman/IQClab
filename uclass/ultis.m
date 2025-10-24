@@ -10,6 +10,8 @@ classdef ultis < handle & matlab.mixin.SetGetExactNames
 %
 % Author:      J.Veenman
 % Date:        30-10-2019
+%              23-10-2025 Bug fix in positive real (PR) multiplier in
+%                         defining the terminal cost constraint Z
 % 
 % -------------------------------------------------------------------------
 %
@@ -641,20 +643,7 @@ methods
             prob                   = iqclmi(prob,V,1,0,B);
             switch tc
                 case 'on'
-                    Z12            = iqcvar(prob,[0,0],'symmetric');
-                    for i = 1:length(nr)
-                        if (l(i)-1)*nr(i) ~= 0
-                            Z12    = blkdiag(Z12,iqcvar(prob,[(l(i)-1)*nr(i),(l(i)-1)*nr(i)],'symmetric'));
-                        end
-                    end
-                    T              = [eye(R.Dim(1));eye(R.Dim(1))];
-                    Z              = [-Z12,Z12;Z12,Z12];
-                    prob           = fZ(prob,Z,eye(Z.Dim(1)));
-                    W              = blkdiag(R,-Z);
-                    if W.Dim(1) > 0 && W.Dim(2) > 0
-                        prob       = iqclmi(prob,Z12,-1);
-                        prob       = iqclmi(prob,W,-1,0,T);
-                    end
+                    prob           = fZ(prob,zeros(R.Dim(1)),eye(R.Dim(1)));
             end
         case {'CH','PC','ZP'}
             P11                    = iqcvar(prob,[size(Phi.c,1),size(Phi.c,1)],'symmetric');
