@@ -9,6 +9,7 @@ function out = sensanalysis(P,meth,N,plotonoff)
 %
 % Author:      J.Veenman
 % Date:        06-04-2024
+%              17-03-2025 Streamlined code + bug fix in 'spea' case
 % 
 % -------------------------------------------------------------------------
 %
@@ -178,16 +179,14 @@ elseif nargin == 4
         plotonoff = 'on';
     end
 end
-methset = {'spea','src','morris','var'};
-if ~ismember(meth,methset)
-    error('Please specify either of the following methods: spea, src, morris, or var.');
-end
+meth                        = validatestring(meth, {'spea','src','morris','var'});
+
 
 [M,d]                       = fLFTdata(P);
 k                           = length(d.unc);
 
 for i = 1:k
-    if strcmp(d.type{i},'ureal') ~= 1
+    if ~strcmp(d.type{i},'ureal')
         error('Error: This function can only consider uncertain systems that are affected by real parametric uncertainties.');
     end
 end
@@ -224,6 +223,10 @@ if ~isempty(un)
     end
 end
 
+blkSizes                    = cellfun(@length, d.in);
+idx                         = repelem(1:k, blkSizes);
+evalNorm                    = @(x) norm(lft(diag(x(idx)), M), inf);
+
 switch meth
     case 'morris'
         p                   = 2000;
@@ -233,46 +236,45 @@ switch meth
         B                   = tril(ones(k+1,k),-1);
         Jmk                 = ones(k+1,k);
         Jm1                 = ones(k+1,1);
-        for j = 1:N    
+        J                   = zeros(N,k);
+        di                  = zeros(N,k);
+        mu                  = zeros(1,k);
+        si                  = zeros(1,k);
+        msg                 = '';
+        for j = 1:N
+            newmsg          = sprintf('j = %d of %d', j, N);
+            fprintf([repmat('\b',1,length(msg)) '%s'], newmsg);
+            msg             = newmsg;
             Ds              = diag(sign(randn(k,1)));
             Ps              = eye(k);
             Ps              = Ps(randperm(k),:);
             xs              = randi([0,nv-1],1,k)/(p-1);
             Bs              = (Jm1*xs + DEL/2*((2*B-Jmk)*Ds+Jmk))*Ps;
             Bsc             = 2*Bs-Jm1;
-            for w = 1:k
-                J(j,w)      = find(abs(Bsc(w+1,:)-Bsc(w,:)));
-            end
+            [~, J(j,:)]     = max(abs(diff(Bsc,1,1)), [], 2);
+            nrms            = zeros(k+1,1);
             for n = 1:k+1
-                del         = [];
-                for m = 1:k
-                    del     = [del,Bsc(n,m)*ones(1,length(d.in{m}))];
-                end
-                Del{n}      = diag(del);
+                nrms(n)     = evalNorm(Bsc(n,:));
             end
-            for i = 1:k
-                di(j,i)     = abs((norm(lft(Del{i+1},M),inf)-norm(lft(Del{i},M),inf))/DEL);
-            end
+            di(j,:)         = abs(diff(nrms).'/DEL);
         end
+        fprintf('\n');
         for n = 1:k
-            mu(n)           = mean(di(J == n));
-            si(n)           = std(di(J == n));
+            vals            = di(J == n);
+            mu(n)           = mean(vals);
+            si(n)           = std(vals);
         end
-
         [muo,muI]           = sort(mu,'descend');
         out.Unc             = d.name(muI);
         out.mu              = muo;
         out.std             = si(muI);
-
         if strcmp(plotonoff,'on')
             set(0,'DefaultAxesFontSize',14);
             clrs            = jet(k);
-    
             figure;
             for i = 1:k
                 plot(out.mu(i),out.std(i),'Marker','o','MarkerEdgeColor',clrs(i,:),'MarkerFaceColor',clrs(i,:),'Color',clrs(i,:));hold on
             end
-    
             grid on
             axis([0,1.1*max(out.mu),0,1.1*max(out.std),]);
             title('Sensitivity analysis: Morris method');
@@ -286,41 +288,42 @@ switch meth
         A                   = 2*rand(N,k)-1;
         B                   = 2*rand(N,k)-1;
         C                   = [A;B];
+        ev                  = zeros(2*N,1);
+        Si                  = zeros(1,k);
+        STi                 = zeros(1,k);
+        evSi                = zeros(N,1);
+        evSTi               = zeros(N,1);
+        msg                 = '';
         for n = 1:2*N
-            del             = [];
-            for m = 1:k
-                del         = [del,C(n,m)*ones(1,length(d.in{m}))];
-            end
-            ev(n)           = norm(lft(diag(del),M),inf);
+            newmsg          = sprintf('n = %d of %d', n, 2*N);
+            fprintf([repmat('\b',1,length(msg)) '%s'], newmsg);
+            msg             = newmsg;
+            ev(n)           = evalNorm(C(n,:));
         end
+        fprintf('\n');
+        evA                 = ev(1:N);
+        evB                 = ev(N+1:2*N);
         varY                = var(ev);
+        msg                 = '';
         for m = 1:k
+            newmsg          = sprintf('m = %d of %d', m, k);
+            fprintf([repmat('\b',1,length(msg)) '%s'], newmsg);
+            msg             = newmsg;
             ABi             = A;
             ABi(:,m)        = B(:,m);
             for n = 1:N
-                delA        = [];
-                delB        = [];
-                delABi      = [];
-                for i = 1:k
-                    delA    = [delA,  A(n,i)*ones(1,length(d.in{i}))];
-                    delB    = [delB,  B(n,i)*ones(1,length(d.in{i}))];
-                    delABi  = [delABi,ABi(n,i)*ones(1,length(d.in{i}))];
-                end
-                nrmA        = norm(lft(diag(delA),M),inf);
-                nrmB        = norm(lft(diag(delB),M),inf);
-                nrmABi      = norm(lft(diag(delABi),M),inf);
-        
-                evSi(n)     = (nrmB-nrmABi)^2;
-                evSTi(n)    = (nrmA-nrmABi)^2;
+                nrmABi      = evalNorm(ABi(n,:));
+                evSi(n)     = (evB(n)-nrmABi)^2;
+                evSTi(n)    = (evA(n)-nrmABi)^2;
             end
             Si(m)           = abs(varY - sum(evSi)/2/N)/varY;
             STi(m)          = sum(evSTi)/2/N/varY;
         end
+        fprintf('\n');
         [STio,STiI]         = sort(STi,'descend');
         out.Unc             = d.name(STiI);
         out.STi             = STio;
         out.Si              = Si(STiI);
-        
 
         if strcmp(plotonoff,'on')
             set(0,'DefaultAxesFontSize',14);
@@ -353,27 +356,27 @@ switch meth
             fCutFig(1,1);
         end
     case 'spea'
+        rho                 = zeros(1,k);
+        msg                 = '';
         for j = 1:k
+            newmsg          = sprintf('j = %d of %d', j, k);
+            fprintf([repmat('\b',1,length(msg)) '%s'], newmsg);
+            msg             = newmsg;
             xi              = 2*rand(1,N)-1;
+            yi              = zeros(1,N);
+            x               = zeros(1,k);
             for i = 1:N
-                del         = [];
-                for m = 1:k
-                    if m ~= j
-                        del = [del,0*ones(1,length(d.in{m}))];
-                    elseif m == j
-                        del = [del,xi(i)*ones(1,length(d.in{m}))];
-                    end
-                end
-                yi(i)       = norm(lft(diag(del),M),inf);
+                x(j)        = xi(i);
+                yi(i)       = evalNorm(x);
             end
             vxi             = xi - mean(xi);
             vyi             = yi - mean(yi);
-            rho(j)          = abs(vxi*vyi'/sqrt(sum(vxi.^2)*sum(vxi.^2)));
+            rho(j)          = abs(vxi*vyi'/sqrt(sum(vxi.^2)*sum(vyi.^2)));
         end
+        fprintf('\n');
         [rhoo,rhoI]         = sort(rho,'descend');
         out.Unc             = d.name(rhoI);
         out.rho             = rhoo;
-
         if strcmp(plotonoff,'on')
             set(0,'DefaultAxesFontSize',14);
             figure;
@@ -392,30 +395,26 @@ switch meth
         end
     case 'src'
         A                   = 2*rand(N,k)-1;
+        y                   = zeros(N,1);
+        msg                 = '';
         for i = 1:N
-            del             = [];
-            for m = 1:k
-                del         = [del,A(i,m)*ones(1,length(d.in{m}))];
-            end
-            y(i)            = norm(lft(diag(del),M),inf);
+            newmsg          = sprintf('i = %d of %d', i, N);
+            fprintf([repmat('\b',1,length(msg)) '%s'], newmsg);
+            msg             = newmsg;
+            y(i)            = evalNorm(A(i,:));
         end
-        
+        fprintf('\n');
         yb                  = mean(y);
         ys                  = std(y);
         yt                  = (y-yb)/ys;
-        
-        for j = 1:k
-            xb(j)           = mean(A(:,j));
-            xs(j)           = std(A(:,j));
-            Mt(:,j)         = (A(:,j)-xb(j))/xs(j);
-        end
-        
-        bet                 = abs(pinv(Mt)*yt');
+        xb                  = mean(A,1);
+        xs                  = std(A,0,1);
+        Mt                  = (A - xb) ./ xs;
+        bet                 = abs(Mt \ yt);
         [beto,betI]         = sort(abs(bet),'descend');
         out.Unc             = d.name(betI);
         out.src             = beto;
         out.Rs              = out.src'*out.src;
-        
         if strcmp(plotonoff,'on')
             set(0,'DefaultAxesFontSize',14);
             figure;
