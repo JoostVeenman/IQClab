@@ -71,7 +71,7 @@ options.maxiter   = 5;
 options.subopt    = 1.01;
 options.constants = 1e-6*ones(1,3);
 options.Pi11pos   = 1e-5;
-options.FeasbRad  = 2e5;
+options.FeasbRad  = 1e5;
 
 [K,ga]            = fRobsyn(wolic,ude,[2,2,2],[2,1,1],options);
 Krob              = K{end};
