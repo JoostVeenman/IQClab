@@ -10,6 +10,8 @@ classdef usbsr < handle & matlab.mixin.SetGetExactNames
 %
 % Author:      J.Veenman
 % Date:        02-12-2019
+%              17-06-2026: Added the option to consider sectors and slope
+%                          constraints on [0,inf]
 % 
 % -------------------------------------------------------------------------
 %
@@ -144,10 +146,10 @@ properties (SetAccess = public)
     NumberOfRepetitions double {mustBeReal,mustBeFinite} = 1;
    
     % Norm alpha of the uncertainty delta
-    SectorBounds double {mustBeReal,mustBeFinite} = [0,1];
+    SectorBounds double {mustBeReal} = [0,1];
     
     % Norm alpha of the uncertainty delta
-    SlopeBounds double {mustBeReal,mustBeFinite} = [0,0];
+    SlopeBounds double {mustBeReal} = [0,0];
     
     %  Is the nonlinearity odd or even
     Odd string {mustBeMember(Odd,{'yes','no',''})} = 'no';
@@ -424,6 +426,19 @@ methods
             disp('Warning: If the sector upper-bound is not specified, it is set to be equal to the slope upper-bound.');
         end
     end
+    if isinf(sect(2))
+        bounded_sect = false;
+    else
+        bounded_sect = true;
+        if sect(1) ~= 0
+            sect(1) = 0;
+            disp('Warning: If the sector upper-bound is set to Inf, the sector lower-bound is set to 0.');
+        end
+        if slope(1) ~= 0
+            slope(1) = 0;
+            disp('Warning: If the slope upper-bound is set to Inf, the slope lower-bound is set to 0.');
+        end
+    end
     % Define KYP certificate structure (for continuous or discrete time analysis)
     if Ts == 0
         kyp                                  = [0,1;1,0];
@@ -438,20 +453,29 @@ methods
             % Define LMI Variables
             P11                              = iqcvar(prob,[nr,nr],'symmetric');
             P12                              = iqcvar(prob,[nr,nr],'full');
-            P22                              = iqcvar(prob,[nr,nr],'symmetric');
+            if bounded_sect
+                P22                          = iqcvar(prob,[nr,nr],'symmetric');
+            else
+                P22                          = zeros(nr);
+            end
             P                                = [P11,P12;P12.',P22];
             sc                               = eye(2*nr);
             prob                             = fP(prob,P);
             prob                             = fsc(prob,sc);
             
             % Define LMI constraints
-%             prob                             = iqclmi(prob,P22,-1);           % Convex hull relaxation
-            prob                             = iqclmi(prob,diag(diag(P22)),-1); % Partial convexity relaxation
-            
-            po                               = polydec(pvec('box',ones(nr,1)*sect))';
-            for i = 1:length(po)
-                A                            = [eye(nr);diag(po(i,:))];
-                prob                         = iqclmi(prob,P,1,0,A);
+            if bounded_sect
+                prob                         = iqclmi(prob,diag(diag(P22)),-1); % Partial convexity relaxation
+                po                           = polydec(pvec('box',ones(nr,1)*sect))';
+                for i = 1:length(po)
+                    A                        = [eye(nr);diag(po(i,:))];
+                    prob                     = iqclmi(prob,P,1,0,A);
+                end
+            else  % [0, Inf] sector 
+                prob                         = iqclmi(prob,P11,1);         % P11 \succeq eps*I
+                Pt                           = [zeros(nr),P12;P12.',zeros(nr)];
+                Bt                           = [eye(nr);eye(nr)];
+                prob                         = iqclmi(prob,Pt,1,0,Bt);     % S + S' \succeq eps*I
             end
 
             % Provide input output data
@@ -466,27 +490,40 @@ methods
                 % Define LMI Variables
                 Q                            = iqcvar(prob,[nr,nr],'symmetric');
                 S                            = iqcvar(prob,[nr,nr],'full');
-                R                            = iqcvar(prob,[nr,nr],'symmetric');
+                if bounded_sect
+                    R                        = iqcvar(prob,[nr,nr],'symmetric');
+                else
+                    R                        = zeros(nr);
+                end
                 C0                           = iqcvar(prob,[nr,nr],'full');
                 if l == 1
                     P11                      = blkdiag(Q,zeros(nr));
                     P12                      = blkdiag(S,C0.');
                     P22                      = blkdiag(R,zeros(nr));
                     P                        = [P11,P12;P12.',P22];
-                    sc                       = [eye(nr),zeros(nr,3*nr);zeros(nr),slope(2)*eye(nr),zeros(nr),-eye(nr);...
+                    if bounded_sect
+                       sc                    = [eye(nr),zeros(nr,3*nr);zeros(nr),slope(2)*eye(nr),zeros(nr),-eye(nr);...
                                                 zeros(nr,2*nr),eye(nr),zeros(nr);zeros(nr),-slope(1)*eye(nr),zeros(nr),eye(nr)];
+                    else
+                       sc                    = eye(4*nr);   % no transformation
+                    end
                     prob                     = fP(prob,P);
                     prob                     = fsc(prob,sc);
 
                     % Define LMI sector constraints
-%                     prob                     = iqclmi(prob,R,-1);             % Convex hull relaxation
-                    prob                     = iqclmi(prob,diag(diag(R)),-1); % Partial convexity relaxation
-                    Psect                    = [Q,S;S.',R];
-
-                    po                       = polydec(pvec('box',ones(nr,1)*sect))';
-                    for i = 1:length(po)
-                        A                    = [eye(nr);diag(po(i,:))];
-                        prob                 = iqclmi(prob,Psect,1,0,A);
+                    if bounded_sect
+                        prob                 = iqclmi(prob,diag(diag(R)),-1); % Partial convexity relaxation
+                        Psect                = [Q,S;S.',R];
+                        po                   = polydec(pvec('box',ones(nr,1)*sect))';
+                        for i = 1:length(po)
+                            A                = [eye(nr);diag(po(i,:))];
+                            prob             = iqclmi(prob,Psect,1,0,A);
+                        end
+                    else % [0, Inf] sector 
+                        prob                 = iqclmi(prob,Q,1);           % Q \succeq eps*I
+                        Pt                   = [zeros(nr),S;S.',zeros(nr)];
+                        Bt                   = [eye(nr);eye(nr)];
+                        prob                 = iqclmi(prob,Pt,1,0,Bt);     % S + S' \succeq eps*I
                     end
                     if strcmp(OE,'no')
                         for i = 1:nr
@@ -630,23 +667,34 @@ methods
                     end
                     P                        = [P11,P12;P12.',P22];
                     prob                     = fP(prob,P);
-                    sc11b                    = blkdiag(eye(nr),slope(2)*eye(l*nr));
-                    sc12b                    = blkdiag(zeros(nr),-eye(l*nr));
-                    sc21b                    = blkdiag(zeros(nr),-slope(1)*eye(l*nr));
-                    sc22b                    = eye(nr*(1+l));
-                    scb                      = [sc11b,sc12b;sc21b,sc22b];
-                    sc                       = sca*scb;
+
+                    if bounded_sect
+                        sc11b                = blkdiag(eye(nr),slope(2)*eye(l*nr));
+                        sc12b                = blkdiag(zeros(nr),-eye(l*nr));
+                        sc21b                = blkdiag(zeros(nr),-slope(1)*eye(l*nr));
+                        sc22b                = eye(nr*(1+l));
+                        scb                  = [sc11b,sc12b;sc21b,sc22b];
+                        sc                   = sca*scb;
+                    else
+                        sc                   = sca*eye(2*nr*(1+l));
+                    end
                     prob                     = fsc(prob,sc);
                     
                     % Define LMI sector constraints
-%                     prob                     = iqclmi(prob,R,-1);             % Convex hull relaxation
-                    prob                     = iqclmi(prob,diag(diag(R)),-1); % Partial convexity relaxation
-                    Psect                    = [Q,S;S.',R];
-                    
-                    po                       = polydec(pvec('box',ones(nr,1)*sect))';
-                    for i = 1:length(po)
-                        A                    = [eye(nr);diag(po(i,:))];
-                        prob                 = iqclmi(prob,Psect,1,0,A);
+                    if bounded_sect
+                        prob                 = iqclmi(prob,diag(diag(R)),-1); % Partial convexity relaxation
+                        Psect                = [Q,S;S.',R];
+                        
+                        po                   = polydec(pvec('box',ones(nr,1)*sect))';
+                        for i = 1:length(po)
+                            A                = [eye(nr);diag(po(i,:))];
+                            prob             = iqclmi(prob,Psect,1,0,A);
+                        end
+                    else % [0, Inf] sector
+                        prob                 = iqclmi(prob,Q,1);           % Q \succeq eps*I
+                        Pt                   = [zeros(nr),S;S.',zeros(nr)];
+                        Bt                   = [eye(nr);eye(nr)];
+                        prob                 = iqclmi(prob,Pt,1,0,Bt);     % S + S' \succeq eps*I
                     end
                     switch tc
                         case 'on'
@@ -665,27 +713,42 @@ methods
                 % Define LMI Variables
                 Q                            = iqcvar(prob,[nr,nr],'symmetric');
                 S                            = iqcvar(prob,[nr,nr],'full');
-                R                            = iqcvar(prob,[nr,nr],'symmetric');
+                if bounded_sect
+                    R                        = iqcvar(prob,[nr,nr],'symmetric');
+                else
+                    R                        = zeros(nr);
+                end
                 M0                           = iqcvar(prob,[nr,nr],'full');
                 if l == 1
                     P11                      = blkdiag(Q,zeros(nr));
                     P12                      = blkdiag(S,M0.');
                     P22                      = blkdiag(R,zeros(nr));
                     P                        = [P11,P12;P12.',P22];
-                    sc                       = [eye(nr),zeros(nr,3*nr);zeros(nr),slope(2)*eye(nr),zeros(nr),-eye(nr);...
+                    if bounded_sect
+                       sc                    = [eye(nr),zeros(nr,3*nr);zeros(nr),slope(2)*eye(nr),zeros(nr),-eye(nr);...
                                                 zeros(nr,2*nr),eye(nr),zeros(nr);zeros(nr),-slope(1)*eye(nr),zeros(nr),eye(nr)];
+                    else
+                       sc                    = eye(4*nr); % no transformation
+                    end
+
                     prob                     = fP(prob,P);
                     prob                     = fsc(prob,sc);
 
                     % Define LMI sector constraints
-%                     prob                     = iqclmi(prob,R,-1);             % Convex hull relaxation
-                    prob                     = iqclmi(prob,diag(diag(R)),-1); % Partial convexity relaxation
-                    Psect                    = [Q,S;S.',R];
+                    if bounded_sect
+                        prob                 = iqclmi(prob,diag(diag(R)),-1); % Partial convexity relaxation
+                        Psect                = [Q,S;S.',R];
 
-                    po                       = polydec(pvec('box',ones(nr,1)*sect))';
-                    for i = 1:length(po)
-                        A                    = [eye(nr);diag(po(i,:))];
-                        prob                 = iqclmi(prob,Psect,1,0,A);
+                        po                   = polydec(pvec('box',ones(nr,1)*sect))';
+                        for i = 1:length(po)
+                            A                = [eye(nr);diag(po(i,:))];
+                            prob             = iqclmi(prob,Psect,1,0,A);
+                        end
+                    else % [0, Inf] sector 
+                        prob                 = iqclmi(prob,Q,1);           % Q \succeq eps*I
+                        Pt                   = [zeros(nr),S;S.',zeros(nr)];
+                        Bt                   = [eye(nr);eye(nr)];
+                        prob                 = iqclmi(prob,Pt,1,0,Bt);     % S + S' \succeq eps*I
                     end
 
                     e                        = ones(nr,1);
@@ -741,23 +804,34 @@ methods
                     P12                      = blkdiag(S,[M0,Mm;Mp,zeros((l-1)*nr)].');
                     P22                      = blkdiag(R,zeros(nr*l));
                     P                        = [P11,P12;P12.',P22];
-                    sc11                     = blkdiag(eye(nr),slope(2)*eye(l*nr));
-                    sc12                     = blkdiag(zeros(nr),-eye(l*nr));
-                    sc21                     = blkdiag(zeros(nr),-slope(1)*eye(l*nr));
-                    sc22                     = eye(nr*(1+l));
-                    sc                       = [sc11,sc12;sc21,sc22];
+
+                    if bounded_sect
+                        sc11                 = blkdiag(eye(nr),slope(2)*eye(l*nr));
+                        sc12                 = blkdiag(zeros(nr),-eye(l*nr));
+                        sc21                 = blkdiag(zeros(nr),-slope(1)*eye(l*nr));
+                        sc22                 = eye(nr*(1+l));
+                        sc                   = [sc11,sc12;sc21,sc22];
+                    else
+                        sc                   = eye(2*nr*(1+l));
+                    end
+
                     prob                     = fP(prob,P);
                     prob                     = fsc(prob,sc);
 
-                    % Define LMI sector constraints
-%                     prob                     = iqclmi(prob,R,-1);             % Convex hull relaxation
-                    prob                     = iqclmi(prob,diag(diag(R)),-1); % Partial convexity relaxation
-                    Psect                    = [Q,S;S.',R];
-                    
-                    po                       = polydec(pvec('box',ones(nr,1)*sect))';
-                    for i = 1:length(po)
-                        A                    = [eye(nr);diag(po(i,:))];
-                        prob                 = iqclmi(prob,Psect,1,0,A);
+                    if bounded_sect
+                        prob                 = iqclmi(prob,diag(diag(R)),-1); % Partial convexity relaxation
+                        Psect                = [Q,S;S.',R];
+
+                        po                   = polydec(pvec('box',ones(nr,1)*sect))';
+                        for i = 1:length(po)
+                            A                = [eye(nr);diag(po(i,:))];
+                            prob             = iqclmi(prob,Psect,1,0,A);
+                        end
+                    else % [0, Inf] sector 
+                        prob                 = iqclmi(prob,Q,1);           % Q \succeq eps*I
+                        Pt                   = [zeros(nr),S;S.',zeros(nr)];
+                        Bt                   = [eye(nr);eye(nr)];
+                        prob                 = iqclmi(prob,Pt,1,0,Bt);     % S + S' \succeq eps*I
                     end
 
                     Mv                       = M0;
@@ -841,7 +915,12 @@ methods
                 end
             end
             % Provide input output data
-            IO                               = [nr,nr,0,0,size(Phi.c,1),size(Phi.c,1),P11.Dim(1),P22.Dim(1),size(Phi.a,1),size(Phi.a,1)];
+            if isnumeric(P22)
+                dimP22                       = size(P22,1);
+            else
+                dimP22                       = P22.Dim(1);
+            end
+            IO                               = [nr,nr,0,0,size(Phi.c,1),size(Phi.c,1),P11.Dim(1),dimP22,size(Phi.a,1),size(Phi.a,1)];
             prob                             = fIO(prob,IO);
     end    
     end
