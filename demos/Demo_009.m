@@ -15,7 +15,7 @@
 %
 %              This demo performs an S/KS two DoF control design for an
 %              uncertain second-order system with parametric uncertainties
-%              by means of the function fRobsyn.
+%              by means of the function fRobsyn. 
 %
 % -------------------------------------------------------------------------
 close all;clear all;clc;
