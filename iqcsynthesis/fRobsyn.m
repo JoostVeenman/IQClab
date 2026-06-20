@@ -9,6 +9,7 @@ function [K,ga] = fRobsyn(Pl,Delta,nout,nin,options)
 %
 % Author:      J.Veenman
 % Date:        26-03-2020
+%              20-06-2026 Bug fix, could not handle multiple uncertainties
 % 
 % -------------------------------------------------------------------------
 %
@@ -333,14 +334,23 @@ iqcOpt.Solver                 = options.Solver;
 iqcOpt.Terminate              = options.Terminate;
 iqcOpt.RelAcc                 = options.RelAcc;
 iqcOpt.Pi11pos                = options.Pi11pos;
-prob                          = iqcanalysis(N{1},{Delta,perf},iqcOpt);
+if isa(Delta,'cell')
+    prob                      = iqcanalysis(N{1},[Delta(:)',{perf}],iqcOpt);
+else
+    prob                      = iqcanalysis(N{1},{Delta,perf},iqcOpt);
+end
 ga(1)                         = prob.gamma;
 
-if ga(1) == -1
-    error('LMIs are not feasible.');
-else
-    disp('');
-    disp(['The IQC analysis problem is feasible with: gamma = ',num2str(ga(1))])
+try
+    if ga(1) == -1
+        error('LMIs are not feasible.');
+    else
+        disp('');
+        disp(['The IQC analysis problem is feasible with: gamma = ',num2str(ga(1))])
+    end
+catch
+    disp('IQC analysis failed')
+    return
 end
 
 % Perform the synthesis-analysis iteration
@@ -355,30 +365,45 @@ while abs(ga_new-ga_old) > 1e-2 && i < options.maxiter
     Psi                       = prob.Psi;
     W                         = ssbal(Psi'*sc'*P*sc*Psi); % Construct the multiplier
 
-    disp(' ');
-    disp('Perform a weighted controller synthesis...');
-    options.FeasbRad          = 10*options.FeasbRad;
-    [K{i},ga(i)]              = fWhinfsyn(Pl,W,nout,nin,options);
-    options.FeasbRad          = 0.1*options.FeasbRad;
-
-    if ga(i) == -1
-        error('LMIs are not feasible.');
-    else
-        disp(['The weighted synthesis problem is feasible with: gamma = ',num2str(ga(i))])
+    try
+        disp(' ');
+        disp('Perform a weighted controller synthesis...');
+        options.FeasbRad      = 10*options.FeasbRad;
+        [K{i},ga(i)]          = fWhinfsyn(Pl,W,nout,nin,options);
+        options.FeasbRad      = 0.1*options.FeasbRad;
+    
+        if ga(i) == -1
+            error('LMIs are not feasible.');
+        else
+            disp(['The weighted synthesis problem is feasible with: gamma = ',num2str(ga(i))])
+        end
+    catch
+        disp('Weighted synthesis failed')
+        return
     end
     
     % Perform a robustness analysis
     disp(' ');
     disp('Perform a first IQC analysis...');
     N{i}                      = lft(Pl,K{i});
-    prob                      = iqcanalysis(N{i},{Delta,perf},iqcOpt);
-    ga(i)                     = prob.gamma;
-    
-    if ga(i) == -1
-        error('LMIs are not feasible.');
+    if isa(Delta,'cell')
+        prob                  = iqcanalysis(N{i},[Delta(:)',{perf}],iqcOpt);
     else
-        disp(['The IQC analysis problem is feasible with: gamma = ',num2str(ga(i))])
+        prob                  = iqcanalysis(N{i},{Delta,perf},iqcOpt);
     end
+    ga(i)                     = prob.gamma;
+
+    try
+        if ga(i) == -1
+            error('LMIs are not feasible.');
+        else
+            disp(['The IQC analysis problem is feasible with: gamma = ',num2str(ga(i))])
+        end
+    catch
+        disp('IQC analysis failed')
+        return
+    end
+
     ga_old                    = ga(i);
     ga_new                    = ga(i-1);
     i                         = i + 1;
